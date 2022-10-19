@@ -4,5 +4,7 @@
 
 Qiime2 plugin for exploring diversity through the convex hull area and volume of samples. For more information on Qiime2 visit: https://qiime2.org/
 ## Installation
+
+```
 pip install -e .
- 
+```
