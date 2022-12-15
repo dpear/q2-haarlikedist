@@ -25,7 +25,7 @@ tree_string = '((1:1.0,(2:1.0,3:1.0):1.0):1.0,(4:1.0,((5:1.0,6:1.0):1.0,7:1.0):1
 tree_string_io = StringIO(tree_string)
 t2 = read(tree_string_io, format="newick", into=TreeNode)
 all_leaves = t2.tips()
-numleaves = len(all_leaves)
+numleaves = len([x for x in t2.tips()])
 
 # Matrix that tracks all haar-like vectors
 # Has n-leaves rows and n-internal nodes columns
@@ -80,11 +80,23 @@ t2.cache_attr(fn_case, 'case')
 
 ###############################################
 def handle_both(node, lilmat, sparsehaarlike, i):
+    """ Case that both a node's children are leaves.
+        First get the indeces of each child's leaf children. 
+        Then assign correct index of lstar to length of edge.
+        This is actually length * 1 since there is 1 descendant 
+        from a leaf, which is itself.
+
+        Assign ith row in lilmat.
+
+        Then assign the correct values to the ith row of
+        sparsehaarlike matrix.
+    """
 
     child = node.children
-    lstar = np.zeros((numleaves, 1))
+
     index0 = child[0].tip_names
     index1 = child[1].tip_names
+    lstar = np.zeros((numleaves, 1))
 
     lstar[index0] = child[0].length
     lstar[index1] = child[1].length
@@ -97,18 +109,134 @@ def handle_both(node, lilmat, sparsehaarlike, i):
     return lilmat, sparsehaarlike
 
 
+def handle_left(node, lilmat, sparsehaarlike, i):
+    """ Case that a node's left child is a leaf.
+        Right child is not a leaf.
+    """
+
+    child = node.children
+
+    index = nontip_index[child[1]]
+
+    lstar0 = np.zeros((numleaves, 1))
+    lstar1 = np.transpose(lilmat[index].todense())
+
+
+    index0 = child[0].tip_names
+    index1 = child[1].tip_names
+
+    # lstar0[index0] = child[0].length
+    lstar0[index0] = lstar0[index0] + len(child[0].tip_names) * child[0].length
+    lstar1[index1] = lstar1[index1] + len(child[1].tip_names) * child[1].length # child[1].dist
+    
+    lilmat[i] = np.transpose(lstar0) + np.transpose(lstar1)
+    L1 = np.count_nonzero(lstar1)
+    haarvec = np.zeros((numleaves, 1))
+    
+    haarvec[index0] = np.sqrt(L1/(L1+1))
+    haarvec[index1] = - np.sqrt(1/(L1*(L1+1)))
+    sparsehaarlike[i] = np.transpose(haarvec)
+
+    return lilmat, sparsehaarlike
+
+def handle_right(node, lilmat, sparsehaarlike, i):
+    """ Case that a node's right child is a leaf.
+        Left child is not a leaf.
+    """
+
+    child = node.children
+    index = nontip_index[child[0]]
+
+    lstar0 = np.transpose(lilmat[index].todense())
+    lstar1 = np.zeros((numleaves, 1))
+
+    index0 = child[0].tip_names
+    index1 = child[1].tip_names
+
+    lstar0[index0] = lstar0[index0] + len(child[0].tip_names) * child[0].length
+    lstar1[index1] = lstar1[index1] + len(child[1].tip_names) * child[1].length
+    
+    lilmat[i] = np.transpose(lstar0) + np.transpose(lstar1)
+
+    L0 = np.count_nonzero(lstar0)
+    haarvec = np.zeros((numleaves, 1))
+    
+    haarvec[index0] = np.sqrt(1/(L0*(L0+1)))
+    haarvec[index1] = -np.sqrt(L0/((L0+1)))
+    sparsehaarlike[i] = np.transpose(haarvec)
+
+    return lilmat, sparsehaarlike
+
+def handle_neither(node, lilmat, sparsehaarlike, i):
+    """ Case that a node's children both have 
+        descendants.
+    """
+
+    child = node.children
+
+    # index of the internal node children, for 
+    # indexing rows of matrices
+    index0 = nontip_index[child[0]]
+    index1 = nontip_index[child[1]]
+
+    lstar0 = np.transpose(lilmat[index0].todense())
+    lstar1 = np.transpose(lilmat[index1].todense())
+
+    # index of the leaf children, for
+    # indexing column of lstar vector
+    index00 = child[0].tip_names
+    index11 = child[1].tip_names
+
+    lstar0[index00] = lstar0[index00] + len(child[0].tip_names) * child[0].length
+    lstar1[index11] = lstar1[index11] + len(child[1].tip_names) * child[1].length
+    
+    lilmat[i] = np.transpose(lstar0) + np.transpose(lstar1)
+
+    L0 = np.count_nonzero(lstar0)
+    L1 = np.count_nonzero(lstar1)
+
+    haarvec = np.zeros((numleaves, 1))
+    
+    haarvec[index00] = np.sqrt(L1/(L0*(L0+L1)))
+    haarvec[index11] = - np.sqrt(L0/(L1*(L0+L1)))
+
+    sparsehaarlike[i] = np.transpose(haarvec)
+
+    return lilmat, sparsehaarlike
+
+###############################################
+# Traverse non_tips in postorder
+traversal = t2.non_tips(include_self=True)
+for i,node in enumerate(traversal):
+
+    case = get_case(node)
+
+    if case == 'both_child_tip':
+        lilmat, sparsehaarlike = handle_both(node, lilmat, sparsehaarlike, i)
+        
+    elif case == 'left_child_tip':
+        lilmat, sparsehaarlike = handle_left(node, lilmat, sparsehaarlike, i)
+
+    elif case == 'right_child_tip':
+        lilmat, sparsehaarlike = handle_right(node, lilmat, sparsehaarlike, i)
+
+    elif case == 'neither_child_tip':
+        lilmat, sparsehaarlike = handle_neither(node, lilmat, sparsehaarlike, i)
+
+
 ###############################################
 # RANDOM THINGS FOR TESTING
 
 def get_node_from_ind(t2, node_ind):
 """ Helper function for testing.
-    Returns i'th non-tip node. """    
+    Returns <node_ind>'th non-tip node. """    
     for i,n in enumerate(t2.non_tips(include_self=True)):
         if i == node_ind:
             return n
 
 # Test get_case on tree from diagrams
 def test_get_case():
+
     for i,node in enumerate(t2.non_tips(include_self=True)):
 
         if i == 0:
@@ -130,7 +258,7 @@ def test_handle_both():
     lilmat = scipy.sparse.lil_matrix((numleaves, numleaves))
     sparsehaarlike, lilmat = handle_both(node, lilmat, sparsehaarlike, i)
 
-    # shl = sparse haar-like
+    # shl ---> sparse haar-like
     val = 1/np.sqrt(2)
     expected_shl = [[0, val, -val, 0, 0, 0, 0],
                       [0, 0, 0, 0, 0, 0, 0],
@@ -143,322 +271,3 @@ def test_handle_both():
 
     # use numpy method to see if they are all close
     np.allclose(expected_shl.A, sparsehaarlike.A)
-
-
-###############################################
-# Traverse non_tips in postorder
-traversal = t2.non_tips(include_self=True)
-for i,node in enumerate(traversal):
-
-    case = get_case(node)
-
-    if case == 'both_child_tip':
-
-        lilmat, sparsehaarlike = handle_both(node, lilmat, 
-                                             sparsehaarlike, i)
-        
-    elif case == 'left_child_tip':
-        
-        def handle_left(node, lilmat, sparsehaarlike, i):
-            # NOT FINISHED
-
-            child = node.children
-            index = nontip_index[child[1]] # not sure about this
-
-            lstar0 = np.zeros((numleaves, 1))
-            lstar1 = np.transpose(lilmat[index].todense())
-
-
-            index0 = child[0].tip_names
-            index1 = child[1].tip_names
-
-
-            # lstar0[index0] = child[0].length
-            lstar0[index0] = lstar0[index0] + len(child[1].tip_names) * child[0].length
-            lstar1[index1] = lstar1[index1] + len(child[1].tip_names) * child[1].length # child[1].dist
-            
-            lilmat[i] = np.transpose(lstar0) + np.transpose(lstar1)
-            L1 = np.count_nonzero(lstar1)
-            haarvec = np.zeros((numleaves, 1))
-            
-            haarvec[index0] = np.sqrt(L1/(L1+1))
-            haarvec[index1] = -np.sqrt(1/(L1*(L1+1)))
-            sparsehaarlike[i] = np.transpose(haarvec)
-
-            return lilmat, sparsehaarlike
-
-        lilmat, sparsehaarlike = handle_left(node, lilmat, sparsehaarlike, i)
-
-    # TODO:
-    #     # Right child is a leaf
-    #     elif len(node2leaves[child[1]]) == 1:
-    #         lstar1 = np.zeros((numleaves, 1))
-    #         index1 = child[1].pos
-    #         lstar1[index1] = child[1].dist
-    #         index = child[0].loc
-    #         lstar0 = np.transpose(lilmat[index].todense())
-    #         index0 = child[0].pos
-    #         lstar0[index0] = lstar0[index0] + len(child[0])*child[0].dist
-    #         lilmat[i] = np.transpose(lstar1) + np.transpose(lstar0)
-    #         L0 = np.count_nonzero(lstar0)
-            
-    #         haarvec = np.zeros((numleaves,1))
-    #         haarvec[index0] = np.sqrt(1/(L0*(L0+1)))
-    #         haarvec[index1] = -np.sqrt(L0/((L0+1)))
-    #         sparsehaarlike[i] = np.transpose(haarvec)
-        
-    #     # Both children are leaves?
-    #     else:
-    #         index0 = child[0].loc
-    #         index1 = child[1].loc
-            
-    #         lstar0 = np.transpose(lilmat[index0].todense())
-    #         lstar1 = np.transpose(lilmat[index1].todense())
-            
-    #         index00 = child[0].pos
-    #         lstar0[index00] = lstar0[index00] + len(child[0])*child[0].dist
-    #         index11 = child[1].pos
-    #         lstar1[index11] = lstar1[index11]+len(child[1])*child[1].dist
-    #         lilmat[i] = np.transpose(lstar0)+np.transpose(lstar1)
-    #         L0 = np.count_nonzero(lstar0)
-    #         L1 = np.count_nonzero(lstar1)
-            
-    #         haarvec = np.zeros((numleaves, 1))
-    #         haarvec[index00] = np.sqrt(L1/(L0*(L0+L1)))
-    #         haarvec[index11] = -np.sqrt(L0/(L1*(L0+L1)))
-            
-    #         sparsehaarlike[i] = np.transpose(haarvec)
-    #     i+=1
-
-
-all_leaves = t.get_leaves()
-
-node_index = {l.name:i for i,l in enumerate(all_leaves)}
-# return dictionary of node instances, 
-# allows quick access to node attributes without traversing the tree
-node2leaves = t.get_cached_content()
-numleaves = len(t) 
-
-# Initialize row-based list of lists sparse matrix to store Haar-like vectors
-# List of lists format
-sparsehaarlike = scipy.sparse.lil_matrix((numleaves, numleaves))
-all_leaves = t.get_leaves()
-mastersplit = t.children
-lilmat = scipy.sparse.lil_matrix((numleaves, numleaves))
-node2leaves
-def is_leaf_fn(node):
-    print(node, node.is_leaf())
-    return node.is_leaf()
-
-
-traversal = t.traverse("postorder", is_leaf_fn)
-for node in traversal:
-    print('xxxxxxxx')
-traversal = t.traverse("postorder")
-for node in traversal:
-
-    pos = find_matching_index(node, all_leaves)
-    print(pos)
-    print('   ')
-for i, node in enumerate(node):
-    print(i, node)
-# I had an error of "TreeNode object has no pos"
-# Resolution: I had added the continue break too early on in code
-# ordering of nodes in post order traversal
-
-# Error of list index out of range for lilmat
-# Move i+= to the end of the code
-i = 0
-traversal = t.traverse("postorder")
-for node in traversal:
-
-    print(i,node)
-    pos = find_matching_index(node, all_leaves)
-    
-    node.add_features(pos=pos) # store indices of leaves under each internal node
-    node.add_features(loc=i) # Add node index to node features
-    
-    if node.is_leaf(): continue # only iterate over internal nodes
-
-    # Both children are leaves
-    if len(node2leaves[node]) == 2:
-        child = node.children
-        lstar = np.zeros((numleaves, 1))
-        index0 = child[0].pos
-        index1 = child[1].pos
-        lstar[index0] = child[0].dist
-        lstar[index1] = child[1].dist
-        lilmat[i] = np.transpose(lstar)
-        haarvec = np.zeros((numleaves,1))
-        haarvec[index0] = 1/np.sqrt(2)
-        haarvec[index1] = -1/np.sqrt(2)
-        sparsehaarlike[i] = np.transpose(haarvec)
-
-    else:
-        
-        child = node.children
-
-        # Left child is a leaf
-        if len(node2leaves[child[0]]) == 1:
-
-            lstar0 = np.zeros((numleaves, 1))
-            index0 = child[0].pos
-            lstar0[index0] = child[0].dist
-            index = child[1].loc
-            lstar1 = np.transpose(lilmat[index].todense())
-            index1 = child[1].pos                
-            lstar1[index1] = lstar1[index1] + len(child[1])*child[1].dist
-            lilmat[i] = np.transpose(lstar0) + np.transpose(lstar1)
-            L1 = np.count_nonzero(lstar1)
-            haarvec = np.zeros((numleaves, 1))
-            
-            haarvec[index0] = np.sqrt(L1/(L1+1))
-            haarvec[index1] = -np.sqrt(1/(L1*(L1+1)))
-            sparsehaarlike[i] = np.transpose(haarvec)
-
-        # Right child is a leaf
-        elif len(node2leaves[child[1]]) == 1:
-            lstar1 = np.zeros((numleaves, 1))
-            index1 = child[1].pos
-            lstar1[index1] = child[1].dist
-            index = child[0].loc
-            lstar0 = np.transpose(lilmat[index].todense())
-            index0 = child[0].pos
-            lstar0[index0] = lstar0[index0] + len(child[0])*child[0].dist
-            lilmat[i] = np.transpose(lstar1) + np.transpose(lstar0)
-            L0 = np.count_nonzero(lstar0)
-            
-            haarvec = np.zeros((numleaves,1))
-            haarvec[index0] = np.sqrt(1/(L0*(L0+1)))
-            haarvec[index1] = -np.sqrt(L0/((L0+1)))
-            sparsehaarlike[i] = np.transpose(haarvec)
-        
-        # Both children are leaves?
-        else:
-            index0 = child[0].loc
-            index1 = child[1].loc
-            
-            lstar0 = np.transpose(lilmat[index0].todense())
-            lstar1 = np.transpose(lilmat[index1].todense())
-            
-            index00 = child[0].pos
-            lstar0[index00] = lstar0[index00] + len(child[0])*child[0].dist
-            index11 = child[1].pos
-            lstar1[index11] = lstar1[index11]+len(child[1])*child[1].dist
-            lilmat[i] = np.transpose(lstar0)+np.transpose(lstar1)
-            L0 = np.count_nonzero(lstar0)
-            L1 = np.count_nonzero(lstar1)
-            
-            haarvec = np.zeros((numleaves, 1))
-            haarvec[index00] = np.sqrt(L1/(L0*(L0+L1)))
-            haarvec[index11] = -np.sqrt(L0/(L1*(L0+L1)))
-            
-            sparsehaarlike[i] = np.transpose(haarvec)
-        i+=1
-lilmat.data
-i=0 #ordering of nodes in post order traversal
-for node in t.traverse("postorder", is_leaf_fn):
-    
-    node.add_features(pos=find_matching_index(node,all_leaves)) # store indices of leaves under each internal node
-    veclen=len(node2leaves[node])
-    print(i)
-    
-    if not node.is_leaf():
-        node.add_features(loc=i) #add node index to node features
-        if veclen==2:
-            child=node.children
-            lstar=np.zeros((numleaves,1))
-            index0=child[0].pos
-            index1=child[1].pos
-            lstar[index0]=child[0].dist
-            lstar[index1]=child[1].dist
-            lilmat[i]=np.transpose(lstar)
-            haarvec=np.zeros((numleaves,1))
-            haarvec[index0]=1/np.sqrt(2)
-            haarvec[index1]=-1/np.sqrt(2)
-            sparsehaarlike[i]=np.transpose(haarvec)
-            i=i+1
-        else:
-            child=node.children
-            if len(node2leaves[child[0]])==1:
-
-                lstar0=np.zeros((numleaves,1))
-                index0=child[0].pos
-                lstar0[index0]=child[0].dist
-
-                index=child[1].loc
-                lstar1=np.transpose(lilmat[index].todense())
-                index1=child[1].pos                
-                lstar1[index1]=lstar1[index1]+len(child[1])*child[1].dist
-                lilmat[i]=np.transpose(lstar0)+np.transpose(lstar1)
-                L1=np.count_nonzero(lstar1)
-                haarvec=np.zeros((numleaves,1))
-                haarvec[index0]=np.sqrt(L1/(L1+1))
-                haarvec[index1]=-np.sqrt(1/(L1*(L1+1)))
-                sparsehaarlike[i]=np.transpose(haarvec)
-                i=i+1
-            elif len(node2leaves[child[1]])==1:
-                lstar1=np.zeros((numleaves,1))
-                index1=child[1].pos
-                lstar1[index1]=child[1].dist
-                index=child[0].loc
-                lstar0=np.transpose(lilmat[index].todense())
-                index0=child[0].pos
-                lstar0[index0]=lstar0[index0]+len(child[0])*child[0].dist
-                lilmat[i]=np.transpose(lstar1)+np.transpose(lstar0)
-                L0=np.count_nonzero(lstar0)
-                haarvec=np.zeros((numleaves,1))
-                haarvec[index0]=np.sqrt(1/(L0*(L0+1)))
-                haarvec[index1]=-np.sqrt(L0/((L0+1)))
-                sparsehaarlike[i]=np.transpose(haarvec)
-                i=i+1
-            else:
-                index0=child[0].loc
-                index1=child[1].loc
-                lstar0=np.transpose(lilmat[index0].todense())
-                lstar1=np.transpose(lilmat[index1].todense())
-                index00=child[0].pos
-                lstar0[index00]=lstar0[index00]+len(child[0])*child[0].dist
-                index11=child[1].pos
-                lstar1[index11]=lstar1[index11]+len(child[1])*child[1].dist
-                lilmat[i]=np.transpose(lstar0)+np.transpose(lstar1)
-                L0=np.count_nonzero(lstar0)
-                L1=np.count_nonzero(lstar1)
-                haarvec=np.zeros((numleaves,1))
-                haarvec[index00]=np.sqrt(L1/(L0*(L0+L1)))
-                haarvec[index11]=-np.sqrt(L0/(L1*(L0+L1)))
-                sparsehaarlike[i]=np.transpose(haarvec)
-                i=i+1
-# CODE GRAVEYARD
-
-
-
-t2 = read(StringIO(tree_string), 
-          format="newick", into=TreeNode)
-
-node_index = {l: i for i, l in enumerate(t2.tips())}
-f = lambda n: [node_index[n]] if n.is_tip() else []
-f2 = lambda n: [n] 
-
-
-t2.cache_attr(f, 'tip_names')
-
-traversal = t2.postorder(include_self=True)
-for n in traversal:
-    print("Node name: %s, cache: %r" % (n.name, n.tip_names))
-    print('   ')
-
-
-
-
-treefile = "Sparsify-Ultrametric/tree.qza"
-
-tree = qiime2.Artifact.load(treefile)
-
-try:
-    from q2_types.tree import NewickFormat
-except ImportError:
-    NewickFormat = str
-
-
-
