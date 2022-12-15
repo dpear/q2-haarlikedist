@@ -28,9 +28,9 @@ all_leaves = t2.tips()
 numleaves = len([x for x in t2.tips()])
 
 # Matrix that tracks all haar-like vectors
-# Has n-leaves rows and n-internal nodes columns
-# Each column represents an internal node
-# Each row represents a leaf: 
+# Has n-leaves columns and n-internal nodes rows
+# Each row represents an internal node
+# Each column represents a leaf: 
 #    0 if leaf is not a descendant from internal node
 #    c_L if leaf is a left descendant from internal node
 #    c_R if leaf is a right descendant from internal node
