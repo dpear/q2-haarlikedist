@@ -6,17 +6,18 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 
-import scipy
 import skbio
+from skbio import read
 from skbio.tree import TreeNode
+from skbio.stats.distance import DistanceMatrix
+
+import scipy
 from scipy.sparse import csr_matrix, lil_matrix
 import numpy as np 
 from io import StringIO
-from skbio import read
 
 import pandas as pd
 import biom
-from q2_types.distance_matrix import DistanceMatrix
 
 def get_tree_from_file(tree_file):
 
@@ -265,8 +266,9 @@ def match_to_tree(table, tree):
         data_file must be a biom table. """
 
     table, tree = table.align_tree(tree)
+    ids = table.ids()
     table = table.matrix_data.tocsr()
-    return table, tree
+    return table, tree, ids
 
 
 def compute_haar_dist(table, shl, diagonal):
@@ -297,9 +299,10 @@ def haar_like_dist(table: biom.Table,
                        -> (DistanceMatrix):
     """ Returns D, modmags. Distance matrix and significance. """
 
-    table, tree = match_to_tree(table, phylogeny)
+    table, tree, ids = match_to_tree(table, phylogeny)
     lilmat, shl = sparsify(tree)
     diagonal = get_lambdas(lilmat, shl)
     D, modmags = compute_haar_dist(table, shl, diagonal)
+    D = DistanceMatrix(D, ids)
 
     return D
