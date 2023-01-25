@@ -4,8 +4,7 @@ from qiime2.plugin import Plugin, Citations
 from q2_types.distance_matrix import DistanceMatrix
 from q2_types.feature_table import (FeatureTable, Frequency)
 
-import q2_haarlikedist
-from . import haar_like_dist
+from q2_haarlikedist._methods import .
 
 
 
@@ -22,18 +21,6 @@ plugin = Plugin(
     short_description='Plugin for haar-like distance.',
 )
 
-plugin.visualizers.register_function(
-    function=haar_like_dist,
-    inputs={},
-    parameters={},
-    input_descriptions={},
-    parameter_descriptions={},
-    name='haarlikedist',
-    description='Computes the haar-like distance matrix.',
-    citations=[
-        citations['Gorman2022'],
-    ]
-)
 
 plugin.methods.register_function(
     function=haar_like_dist,
