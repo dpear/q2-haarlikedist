@@ -293,7 +293,7 @@ def compute_haar_dist(table, shl, diagonal):
 
 
 def haar_like_dist(table: biom.Table, 
-                   phylogeny: skbio.TreeNode):
+                   phylogeny: skbio.TreeNode) \
                        -> (DistanceMatrix):
     """ Returns D, modmags. Distance matrix and significance. """
 
