@@ -16,6 +16,7 @@ from skbio import read
 
 import pandas as pd
 import biom
+from q2_types.distance_matrix import DistanceMatrix
 
 def get_tree_from_file(tree_file):
 
@@ -293,6 +294,7 @@ def compute_haar_dist(table, shl, diagonal):
 
 def haar_like_dist(table: biom.Table, 
                    phylogeny: skbio.TreeNode):
+                       -> (DistanceMatrix):
     """ Returns D, modmags. Distance matrix and significance. """
 
     table, tree = match_to_tree(table, phylogeny)
