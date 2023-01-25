@@ -25,9 +25,8 @@ setup(
         "q2_haarlikedist": ['citations.bib'],
     },
     zip_safe=False,
-    install_requires=['scikit-learn',
-                      'scipy',
+    install_requires=['scipy',
                       'scikit-bio',
                       'pandas',
-                      'ete3']
+                      'biom']
 )

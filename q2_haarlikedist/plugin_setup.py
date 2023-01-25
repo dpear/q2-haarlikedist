@@ -1,14 +1,12 @@
 import importlib
-from qiime2.plugin import (Plugin, Int, Citations,
-                           Str, Range, Metadata)
+from qiime2.plugin import Plugin, Citations
 
-
-from q2_types.sample_data import SampleData
-from q2_types.ordination import PCoAResults
+from q2_types.distance_matrix import DistanceMatrix
+from q2_types.feature_table import (FeatureTable, Frequency)
 
 import q2_haarlikedist
 from . import haar_like_dist
-from q2_types.feature_table import (FeatureTable, Frequency)
+
 
 
 citations = Citations.load('citations.bib', package='q2_haarlikedist')
@@ -37,3 +35,32 @@ plugin.visualizers.register_function(
     ]
 )
 
+plugin.methods.register_function(
+    function=haar_like_dist,
+    inputs={
+        'phylogeny': Phylogeny[Rooted],
+        'table': FeatureTable[Frequency]
+    },
+    parameters={},
+    outputs=[
+        ('distance_matrix', DistanceMatrix),
+    ],
+    input_descriptions={
+        'phylogeny': (
+            'Phylogeny tree associated with table.'
+        ),
+        'table': (
+            'Biom table with samples and matching OTU IDs.'
+        )
+    },
+    parameter_descriptions={},
+    output_descriptions={
+        'distance_matrix':
+            'Resulting distance matrix.'
+    },
+    name='haarlikedist',
+    description='Computes haar-like-distance between samples.',
+    citations=[
+        citations['Gorman2022'],
+    ]
+)

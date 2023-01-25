@@ -8,9 +8,14 @@
 
 import scipy
 import skbio
+from skbio.tree import TreeNode
+from scipy.sparse import csr_matrix, lil_matrix
 import numpy as np 
 from io import StringIO
 from skbio import read
+
+import pandas as pd
+import biom
 
 def get_tree_from_file(tree_file):
 
@@ -36,8 +41,8 @@ def initiate_values(t2):
     with non-tip descendants. """
 
     ntips = len([x for x in t2.tips()])
-    shl = scipy.sparse.lil_matrix((ntips, ntips))
-    lilmat = scipy.sparse.lil_matrix((ntips, ntips))
+    shl = lil_matrix((ntips, ntips))
+    lilmat = lil_matrix((ntips, ntips))
 
     tip_index = {t: i for i, t in enumerate(t2.tips())}
 
@@ -84,7 +89,7 @@ def get_nontip_index(node, side):
 
 
 def get_tip_indeces(node, side):
-    """ Returns all left or right tip children. """
+    """ Returns all left or right tip children indeces. """
 
     ind = 0 if side == 'left' else 1
     return node.children[ind].tip_names
@@ -186,9 +191,31 @@ def handle_both(node, lilmat, shl, i):
     return get_lilmat_and_shl(node, nontip_inds0, nontip_inds1, lilmat, shl, i)
 
 
-def sparsify(tree_file):
+def create_branching_tree(t2, lilmat, shl):
+    """ Returns lilmat, shl represented as two branching trees. """
+    mastersplit = t2.children
 
-    t2 = get_tree_from_file(tree_file)
+    ntips0 = len([x for x in mastersplit[0].tips()])
+    ntips1 = len([x for x in mastersplit[1].tips()])
+
+    values0 = np.repeat(1/np.sqrt(ntips0), ntips0)
+    zeros0 = np.repeat(0, ntips1)
+
+    values1 = np.repeat(1/np.sqrt(ntips1), ntips1)
+    zeros1 = np.repeat(0, ntips0)
+
+    shl[-2] = np.hstack((values0, zeros0))
+    shl[-1] = np.hstack((zeros1, values1))
+
+    lilmat[-1] = np.copy(lilmat[-2].todense())
+    lilmat[-2, ntips0:] = 0
+    lilmat[-1, :ntips0] = 0
+
+    return lilmat, shl
+
+
+def sparsify(t2):
+
     t2, shl, lilmat = initiate_values(t2)
 
     traversal = t2.non_tips(include_self=True)
@@ -207,4 +234,70 @@ def sparsify(tree_file):
         elif case == 'right':
             lilmat, shl = handle_right(node, lilmat, shl, i)
 
+    lilmat, shl = create_branching_tree(t2, lilmat, shl)
+
     return lilmat, shl
+
+def get_lambda(lilmat, shl, i):
+    """ Computes lambda for each internal node.
+        Lambda is the lilmat entry for i * shl entry ^2. """
+
+    lstar = lilmat[i].todense().T
+    phi = shl[i].todense()
+    phi2 = np.multiply(phi, phi)
+    lambd = np.dot(phi2, lstar)
+    return lambd
+
+
+def get_lambdas(lilmat, shl):
+    """ Computes all lambdas. """
+
+    n = lilmat.shape[0]
+    data = [get_lambda(lilmat, shl, i) for i in range(n)]
+    data = np.array(data).T
+    diagonal = data[0][0]
+    return diagonal
+
+
+def match_to_tree(table, tree):
+    """ Returns aligned data in biom format.
+        data_file must be a biom table. """
+
+    table, tree = table.align_tree(tree)
+    table = table.matrix_data.tocsr()
+    return table, tree
+
+
+def compute_haar_dist(table, shl, diagonal):
+    
+    # columns are samples after transpose
+    nsamples = table.shape[1]
+    diagonal_mat = csr_matrix([diagonal] * nsamples)
+    diagonal_mat_sqrt = np.sqrt(diagonal_mat)
+    mags = shl @ table
+    modmags = mags.T.multiply(diagonal_mat_sqrt)
+
+    D = np.zeros((nsamples, nsamples))
+    for i in range(nsamples):
+        for j in range(i+1, nsamples):
+
+            distdiff = modmags[i] - modmags[j]
+            # print('distdiff\n', distdiff)
+            distdiff2 = csr_matrix.power(distdiff, 2)
+            d = csr_matrix.sum(distdiff2)
+            D[i, j] = np.sqrt(d)
+
+    D = D + D.T
+    return D, modmags
+
+
+def haar_like_dist(table: biom.Table, 
+                   phylogeny: skbio.TreeNode):
+    """ Returns D, modmags. Distance matrix and significance. """
+
+    table, tree = match_to_tree(table, phylogeny)
+    lilmat, shl = sparsify(tree)
+    diagonal = get_lambdas(lilmat, shl)
+    D, modmags = compute_haar_dist(table, shl, diagonal)
+
+    return table, tree, lilmat, shl, diagonal, D, modmags
