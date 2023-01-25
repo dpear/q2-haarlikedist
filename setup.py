@@ -28,5 +28,5 @@ setup(
     install_requires=['scipy',
                       'scikit-bio',
                       'pandas',
-                      'biom']
+                      'biom-format']
 )
