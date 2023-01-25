@@ -302,4 +302,4 @@ def haar_like_dist(table: biom.Table,
     diagonal = get_lambdas(lilmat, shl)
     D, modmags = compute_haar_dist(table, shl, diagonal)
 
-    return table, tree, lilmat, shl, diagonal, D, modmags
+    return D
