@@ -1,7 +1,7 @@
 import importlib
 from qiime2.plugin import Plugin, Citations
 
-from q2_types.distance_matrix import DistanceMatrix
+from skbio.stats.distance import DistanceMatrix
 from q2_types.feature_table import (FeatureTable, Frequency)
 from q2_types.tree import (Phylogeny, Rooted)
 from q2_haarlikedist._methods import haar_like_dist

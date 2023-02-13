@@ -1,20 +1,36 @@
+from unittest import TestCase, main
+
 import tempfile
 import os
+import pandas as pd
+import qiime2
+from qiime2 import CategoricalMetadataColumn
+from qiime2 import NumericMetadataColumn
 
-from unittest import TestCase, main
 from os.path import dirname, abspath, join
 from inspect import currentframe, getfile
-from q2_haarlikedist._methods import *
 
 
 class TestSparsify(TestCase):
 
     def setUp(self):
-        self.ntips = 7
-        self.tree_file = 'small-tree.tree'
 
+        # Initialize blank matrices
+        self.ntips = 7
         self.lilmat = scipy.sparse.lil_matrix((self.ntips, self.ntips))
         self.shl = scipy.sparse.lil_matrix((self.ntips, self.ntips))
+
+        # Test data table (has one OTU not present in the tree)
+        testdata = 'test-data.qza'
+        testdatafile = join(dirname(abspath(getfile(currentframe()))), testdata)
+        table = qiime2.Artifact.load(testdatafile)
+        self.table = table.view(view_type=biom.Table)
+
+        # Test tree (has seven tips as described in the diagram)
+        testtree = 'small-tree.qza'
+        testtreefile = join(dirname(abspath(getfile(currentframe()))), testtree)
+        tree = qiime2.Artifact.load(testtreefile)
+        self.tree = tree.view(view_type=skbio.TreeNode)
 
 
     def test_get_tree_from_file(self):
@@ -27,7 +43,7 @@ class TestSparsify(TestCase):
 
         expected = scipy.sparse.lil_matrix((self.ntips, self.ntips))
 
-        t2 = get_tree_from_file(self.tree_file)
+        _. t2, _ = match_to_tree(self.table, self.tree)
         t2, lilmat, shl = initiate_values(t2)
 
         assert((lilmat != expected).nnz == 0)
@@ -57,7 +73,7 @@ class TestSparsify(TestCase):
 
     def test_get_case(self):
 
-        t2 = get_tree_from_file(self.tree_file)
+        _. t2, _ = match_to_tree(self.table, self.tree)
         t2, lilmat, shl = initiate_values(t2)
 
         for i, node in enumerate(t2.non_tips(include_self=True)):
@@ -78,7 +94,7 @@ class TestSparsify(TestCase):
 
     def test_get_nontip_index(self):
 
-        t2 = get_tree_from_file(self.tree_file)
+        _. t2, _ = match_to_tree(self.table, self.tree)
         t2, lilmat, shl = initiate_values(t2)
         
         for i, node in enumerate(t2.non_tips(include_self=True)):
@@ -99,7 +115,7 @@ class TestSparsify(TestCase):
 
     def test_get_tip_indeces(self):
 
-        t2 = get_tree_from_file(self.tree_file)
+        _. t2, _ = match_to_tree(self.table, self.tree)
         t2, lilmat, shl = initiate_values(t2)
 
         for i, node in enumerate(t2.non_tips(include_self=True)):
@@ -125,7 +141,7 @@ class TestSparsify(TestCase):
 
     def test_get_lstar(self):
 
-        t2 = get_tree_from_file(self.tree_file)
+        _. t2, _ = match_to_tree(self.table, self.tree)
         t2, lilmat, shl = initiate_values(t2)
 
         for i, node in enumerate(t2.non_tips(include_self=True)):
@@ -161,7 +177,7 @@ class TestSparsify(TestCase):
 
     def test_get_L(self):
 
-        t2 = get_tree_from_file(self.tree_file)
+        _. t2, _ = match_to_tree(self.table, self.tree)
         t2, lilmat, shl = initiate_values(t2)
 
         for i, node in enumerate(t2.non_tips(include_self=True)):
@@ -182,7 +198,7 @@ class TestSparsify(TestCase):
 
     def test_get_haarvec(self):
 
-        t2 = get_tree_from_file(self.tree_file)
+        _. t2, _ = match_to_tree(self.table, self.tree)
         t2, lilmat, shl = initiate_values(t2)
 
         for i, node in enumerate(t2.non_tips(include_self=True)):
@@ -215,7 +231,7 @@ class TestSparsify(TestCase):
 
     def test_get_lilmat_and_shl(self):
 
-        t2 = get_tree_from_file('small-tree.tree')
+        _. t2, _ = match_to_tree(self.table, self.tree)
         t2, lilmat, shl = initiate_values(t2)
 
         for i, node in enumerate(t2.non_tips(include_self=True)):
@@ -255,7 +271,7 @@ class TestSparsify(TestCase):
 
     def test_handle_case(self):
 
-        t2 = get_tree_from_file('small-tree.tree')
+        _. t2, _ = match_to_tree(self.table, self.tree)
         t2, lilmat, shl = initiate_values(t2)
 
         for i, node in enumerate(t2.non_tips(include_self=True)):
@@ -287,26 +303,100 @@ class TestSparsify(TestCase):
 
     def test_sparsify(self):
 
-        lilmat, shl = sparsify(self.tree_file)
+        _. t2, _ = match_to_tree(self.table, self.tree)
+        lilmat, shl = sparsify(t2)
 
         expected_lilmat = [[0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0],
                            [1.0, 3.0, 3.0, 0.0, 0.0, 0.0, 0.0],
                            [0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 0.0],
                            [0.0, 0.0, 0.0, 0.0, 3.0, 3.0, 1.0],
                            [0.0, 0.0, 0.0, 1.0, 6.0, 6.0, 4.0],
-                           [4.0, 6.0, 6.0, 5.0, 10.0, 10.0, 8.0],
-                           [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]]
+                           [4.0, 6.0, 6.0, 0.0, 0.0, 0.0, 0.0],
+                           [0.0, 0.0, 0.0, 5.0, 10.0, 10.0, 8.0]]
 
         expected_shl = [[0.0, 0.70710678, -0.70710678, 0.0, 0.0, 0.0, 0.0],
                         [0.81649658, -0.40824829, -0.40824829, 0.0,  0.0, 0.0, 0.0],
                         [0.0, 0.0, 0.0, 0.0, 0.70710678,-0.70710678, 0.0],
                         [0.0, 0.0, 0.0, 0.0, 0.40824829, 0.40824829, -0.81649658],
                         [0.0, 0.0, 0.0, 0.8660254, -0.28867513, -0.28867513, -0.28867513],
-                        [0.43643578, 0.43643578, 0.43643578, -0.32732684, -0.32732684, -0.32732684, -0.32732684],
-                        [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]]
+                        [ 0.57735027,  0.57735027,  0.57735027,  0.0, 0.0, 0.0, 0.0],
+                        [0.0, 0.0, 0.0, 0.5, 0.5, 0.5, 0.5 ]]
 
         expected_lilmat = scipy.sparse.lil_matrix(expected_lilmat)  
         expected_shl = scipy.sparse.lil_matrix(expected_shl)  
 
         assert(np.isclose(expected_lilmat.todense(), lilmat.todense()).all())
         assert(np.isclose(expected_shl.todense(), shl.todense()).all())
+
+    def test_get_lambda(self):
+
+        _. t2, _ = match_to_tree(self.table, self.tree)
+        lilmat, shl = sparsify(t2)
+
+        for i in range(lilmat.shape[0]):
+
+            if i == 0:
+                x = get_lambda(lilmat_, shl, i)
+                assert(np.isclose(x[0,0], 1))
+            if i == 1:
+                x = get_lambda(lilmat_, shl, i)
+                assert(np.isclose(x[0,0], 5/3))
+            if i == 2:
+                x = get_lambda(lilmat_, shl, i)
+                assert(np.isclose(x[0,0], 1))
+            if i == 3:
+                x = get_lambda(lilmat_, shl, i)
+                assert(np.isclose(x[0,0], 5/3))
+            if i == 4:
+                x = get_lambda(lilmat_, shl, i)
+                assert(np.isclose(x[0,0], 25/12))
+            if i == 5:
+                x = get_lambda(lilmat_, shl, i)
+                assert(np.isclose(x[0,0], 16/3))
+            if i == 6:
+                x = get_lambda(lilmat_, shl, i)
+                assert(np.isclose(x[0,0], 33/4))
+
+    def test_get_lambdas(self):
+
+        _. t2, _ = match_to_tree(self.table, self.tree)
+        lilmat, shl = sparsify(t2)
+
+        diagonal = get_lambdas(lilmat, shl)
+        diagonal_expected = [1.0, 5/3, 1, 5/3, 25/12, 16/3, 33/4]
+
+        assert(np.isclose(diagonal, diagonal_expected).all())
+
+    def test_match_to_tree(self):
+
+        before_exp = np.array(['o1', 'o2', 'o7', 'o3', 'o4', 'o5', 'o6', 'o8'])
+        before_obs = self.table.ids(axis='observation')
+        assert((before_obs == before_exp).all())
+
+        table, tree, ids = match_to_tree(self.table, self.tree)
+
+        before_exp = np.array(['o1', 'o2', 'o7', 'o3', 'o4', 'o5', 'o6', 'o8'])
+        before_obs = table.ids(axis='observation')
+        assert((before_obs == before_exp).all())
+
+        after_exp = matrix([[0.0, 1.0, 0.0, 8.0, 1.0],
+                            [0.0, 1.0, 0.0, 1.0, 1.0],
+                            [2.0, 2.0, 4.0, 1.0, 8.0],
+                            [3.0, 3.0, 7.0, 0.0, 0.0],
+                            [4.0, 5.0, 1.0, 2.0, 2.0],
+                            [0.0, 1.0, 2.0, 3.0, 3.0],
+                            [0.0, 0.0, 6.0, 3.0, 3.0]])
+        assert((table == after_exp.all())
+
+
+
+
+
+
+
+
+
+
+
+
+

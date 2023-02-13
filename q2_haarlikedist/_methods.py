@@ -20,6 +20,7 @@ import pandas as pd
 import biom
 
 def get_tree_from_file(tree_file):
+    """ Used only for testing and development. """
 
     f = open(tree_file, 'r')
     t2 = read(f, format='newick', into=TreeNode)
@@ -273,7 +274,7 @@ def match_to_tree(table, tree):
 
 def compute_haar_dist(table, shl, diagonal):
     
-    # columns are samples after transpose
+    # columns are samples
     nsamples = table.shape[1]
     diagonal_mat = csr_matrix([diagonal] * nsamples)
     diagonal_mat_sqrt = np.sqrt(diagonal_mat)
@@ -285,7 +286,6 @@ def compute_haar_dist(table, shl, diagonal):
         for j in range(i+1, nsamples):
 
             distdiff = modmags[i] - modmags[j]
-            # print('distdiff\n', distdiff)
             distdiff2 = csr_matrix.power(distdiff, 2)
             d = csr_matrix.sum(distdiff2)
             D[i, j] = np.sqrt(d)

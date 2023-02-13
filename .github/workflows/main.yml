@@ -1,0 +1,19 @@
+# much of this is taken from the Empress main.yml file
+name: Main CI
+
+on:
+  pull_request:
+    branches:
+      - master
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: linux-latest
+
+    steps:
+      - name: Run tests & coverage
+        shell: bash -l {0}
+        run: nosetests -v q2_haarlikedist --with-coverage --cover-package=q2_haarlikedist
