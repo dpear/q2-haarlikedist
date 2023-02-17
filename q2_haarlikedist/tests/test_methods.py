@@ -15,17 +15,18 @@ from q2_haarlikedist._methods import (initiate_values,
                                       get_L,
                                       get_haarvec,
                                       get_lilmat_and_shl,
-                                      handle_neither,
-                                      handle_left,
-                                      handle_right,
+                                      # handle_neither,
+                                      # handle_left,
+                                      # handle_right,
                                       handle_both,
-                                      create_branching_tree,
+                                      # create_branching_tree,
                                       sparsify,
                                       get_lambda,
-                                      get_lambdas,
+                                      # get_lambdas,
                                       match_to_tree,
-                                      compute_haar_dist,
-                                      haar_like_dist)
+                                      # compute_haar_dist,
+                                      # haar_like_dist,
+                                      get_lambdas)
 
 
 class TestSparsify(TestCase):
