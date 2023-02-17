@@ -1,5 +1,5 @@
 # ----------------------------------------------------------------------------
-# Copyright (c) 2022--, convex-hull development team.
+# Copyright (c) 2022--, haar-like-dist development team.
 #
 # Distributed under the terms of the Modified BSD License.
 #
@@ -10,14 +10,10 @@ import skbio
 from skbio import read
 from skbio.tree import TreeNode
 from skbio.stats.distance import DistanceMatrix
-
-import scipy
 from scipy.sparse import csr_matrix, lil_matrix
-import numpy as np 
-from io import StringIO
-
-import pandas as pd
+import numpy as np
 import biom
+
 
 def get_tree_from_file(tree_file):
     """ Used only for testing and development. """
@@ -31,7 +27,7 @@ def get_tree_from_file(tree_file):
 def initiate_values(t2):
     """ Returns t2, shl, lilmat.
     shl: Matrix that tracks all haar-like vectors
-    SHL = SPARSE HAAR LIKE 
+    SHL = SPARSE HAAR LIKE
     Rows = internal nodes; Columns = tips with values of :
        -- 0 if tip is not a descendant from internal node
        -- c_L if tip is a left descendant from internal node
@@ -40,7 +36,7 @@ def initiate_values(t2):
 
     lilmat: Matrix that tracks l-star values. n tips x n nontips (so square)
     Entry i, j represents weighted path distance from internal node i to tip j
-    This is why it is computed iteratively for internal nodes 
+    This is why it is computed iteratively for internal nodes
     with non-tip descendants. """
 
     ntips = len([x for x in t2.tips()])
@@ -63,7 +59,7 @@ def initiate_values(t2):
 
 
 def get_case(node):
-    """ Handle different types of children differently. 
+    """ Handle different types of children differently.
         4 possible child layouts; returns string describing the case.
         Neither => neither child is a tip etc. """
 
@@ -81,10 +77,10 @@ def get_case(node):
 
     if not left_is_tip and right_is_tip:
         return 'right'
-        
+
 
 def get_nontip_index(node, side):
-    """ Returns a single nontip index of the node's left or right child. 
+    """ Returns a single nontip index of the node's left or right child.
         Only valid for a nontip node and nontip child. """
 
     ind = 0 if side == 'left' else 1
@@ -102,7 +98,7 @@ def get_lstar(child, tip_inds, nontip_inds, lilmat):
     """ Returns lstar, which is the cumulative modified branch lengths
         from each internal node to each tip node (entries in lstar). """
 
-    if nontip_inds == None:
+    if nontip_inds is None:
         ntips = child.ntips_in_tree
         lstar = np.zeros((ntips, 1))
     else:
@@ -170,7 +166,7 @@ def handle_neither(node, lilmat, shl, i):
 def handle_left(node, lilmat, shl, i):
     """ Case where neither left is a tip. """
 
-    nontip_inds0 = None # Doesn't have a row index in lilmat
+    nontip_inds0 = None  # Doesn't have a row index in lilmat
     nontip_inds1 = get_nontip_index(node, 'right')
 
     return get_lilmat_and_shl(node, nontip_inds0, nontip_inds1, lilmat, shl, i)
@@ -230,7 +226,7 @@ def sparsify(t2):
 
         elif case == 'both':
             lilmat, shl = handle_both(node, lilmat, shl, i)
-            
+
         elif case == 'left':
             lilmat, shl = handle_left(node, lilmat, shl, i)
 
@@ -240,6 +236,7 @@ def sparsify(t2):
     lilmat, shl = create_branching_tree(t2, lilmat, shl)
 
     return lilmat, shl
+
 
 def get_lambda(lilmat, shl, i):
     """ Computes lambda for each internal node.
@@ -273,7 +270,7 @@ def match_to_tree(table, tree):
 
 
 def compute_haar_dist(table, shl, diagonal):
-    
+
     # columns are samples
     nsamples = table.shape[1]
     diagonal_mat = csr_matrix([diagonal] * nsamples)
@@ -294,7 +291,7 @@ def compute_haar_dist(table, shl, diagonal):
     return D, modmags
 
 
-def haar_like_dist(table: biom.Table, 
+def haar_like_dist(table: biom.Table,
                    phylogeny: skbio.TreeNode) \
                        -> (DistanceMatrix):
     """ Returns D, modmags. Distance matrix and significance. """
