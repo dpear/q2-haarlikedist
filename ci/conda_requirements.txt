@@ -1,0 +1,9 @@
+pip
+nose
+flake8
+IPython>4.0.0
+scikit-bio
+biom-format
+numpy>=1.12.1
+scipy
+pandas
