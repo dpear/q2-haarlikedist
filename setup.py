@@ -10,6 +10,8 @@
 
 from setuptools import setup, find_packages
 
+entry_point = 'q2-haarlikedist=q2_haarlikedist.plugin_setup:plugin'
+
 setup(
     name="q2-haarlikedist",
     packages=find_packages(),
@@ -19,7 +21,7 @@ setup(
     description="compute haar-like distance",
     license='BSD-3',
     entry_points={
-        'qiime2.plugins': ['q2-haarlikedist=q2_haarlikedist.plugin_setup:plugin']
+        'qiime2.plugins': [entry_point]
     },
     package_data={
         "q2_haarlikedist": ['citations.bib'],
