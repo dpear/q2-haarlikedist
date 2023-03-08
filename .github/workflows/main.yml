@@ -35,7 +35,7 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: q2
-          environment-file: qiime2-latest-py36-linux-conda.yml
+          environment-file: qiime2-latest-py38-linux-conda.yml
 
       - name: Install conda reqs
         shell: bash -l {0}
