@@ -1,6 +1,7 @@
 # q2-haarlikedist
 
-![](https://github.com/qiime2/q2templates/workflows/ci/badge.svg)
+![](https://github.com/dpear/q2-haarlikedist/actions/workflows/main.yml/badge.svg)
+
 
 Qiime2 plugin for implementing the haar-like wavelet distance metric originally defined in Gorman et. al 2022.
 For more information on Qiime2 visit: https://qiime2.org/
