@@ -37,10 +37,6 @@ jobs:
           activate-environment: q2
           environment-file: qiime2-latest-py36-linux-conda.yml
 
-      - name: Install conda reqs
-        shell: bash -l {0}
-        run: conda install --file ci/conda_requirements.txt -c biocore
-
       - name: Install auxillary CI packages
         shell: bash -l {0}
         run: conda install -c conda-forge coveralls flake8 nose
