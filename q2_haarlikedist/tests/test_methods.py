@@ -307,6 +307,8 @@ class TestSparsify(TestCase):
                 expected_shl = expected_shl.todense()
                 expected_lilmat = scipy.sparse.lil_matrix(expected_lilmat)
                 expected_lilmat = expected_lilmat.todense()
+                shl = shl.todense()
+                lilmat = lilmat.todense()
 
                 assert np.isclose(expected_shl, shl).all()
                 assert np.isclose(expected_lilmat, lilmat).all()
@@ -341,6 +343,8 @@ class TestSparsify(TestCase):
                 expected_shl = expected_shl.todense()
                 expected_lilmat = scipy.sparse.lil_matrix(expected_lilmat)
                 expected_lilmat = expected_lilmat.todense()
+                shl = shl.todense()
+                lilmat = lilmat.todense()
 
                 assert np.isclose(expected_shl, shl).all()
                 assert np.isclose(expected_lilmat, lilmat).all()
