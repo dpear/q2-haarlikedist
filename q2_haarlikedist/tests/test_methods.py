@@ -15,14 +15,13 @@ from q2_haarlikedist._methods import (initiate_values,
                                       get_L,
                                       get_haarvec,
                                       get_lilmat_and_shl,
-                                      # handle_neither,
-                                      # handle_left,
-                                      # handle_right,
+                                      handle_neither,
+                                      handle_left,
+                                      handle_right,
                                       handle_both,
                                       # create_branching_tree,
                                       sparsify,
                                       get_lambda,
-                                      # get_lambdas,
                                       match_to_tree,
                                       # compute_haar_dist,
                                       # haar_like_dist,
@@ -246,46 +245,15 @@ class TestSparsify(TestCase):
                                     -0.32732684]])
                 assert np.isclose(h.T, expected).all()
 
-    def test_handle_both(self):
-
-        assert True
-        # TODO
-
-    def test_handle_neither(self):
-
-        assert True
-        # TODO
-
-    def test_handle_left(self):
-
-        assert True
-        # TODO
-
-    def test_handle_right(self):
-
-        assert True
-        # TODO
-
-    def test_get_lilmat_and_shl(self):
+    def test_handle_case(self):
 
         _, t2, _ = match_to_tree(self.table, self.tree)
         t2, lilmat, shl = initiate_values(t2)
 
         for i, node in enumerate(t2.non_tips(include_self=True)):
+
             if i == 0:
-                nontip_inds0 = None
-                nontip_inds1 = None
-                tip_inds0 = get_tip_indeces(node, 'left')
-                tip_inds1 = get_tip_indeces(node, 'right')
-                left, right = get_L(tip_inds0, tip_inds1)
-                ntips = node.ntips_in_tree
-                h = get_haarvec(tip_inds0, tip_inds1, left, right, ntips)
-                assert (np.isclose(sum(h), 0.0)).all()  # Sum of haar = 0
-
-                lilmat, shl = get_lilmat_and_shl(node, nontip_inds0,
-                                                 nontip_inds1,
-                                                 lilmat, shl, i)
-
+                lilmat, shl = handle_both(node, lilmat, shl, i)
                 val = 1/np.sqrt(2)
                 expected_shl = [[0, val, -val, 0, 0, 0, 0],
                                 [0, 0, 0, 0, 0, 0, 0],
@@ -307,20 +275,119 @@ class TestSparsify(TestCase):
                 expected_shl = expected_shl.todense()
                 expected_lilmat = scipy.sparse.lil_matrix(expected_lilmat)
                 expected_lilmat = expected_lilmat.todense()
-                shl = shl.todense()
-                lilmat = lilmat.todense()
 
-                assert np.isclose(expected_shl, shl).all()
-                assert np.isclose(expected_lilmat, lilmat).all()
+                assert np.isclose(expected_shl, shl.todense()).all()
+                assert np.isclose(expected_lilmat, lilmat.todense()).all()
 
-    def test_handle_case(self):
+            if i == 1:  # left
+                lilmat, shl = handle_left(node, lilmat, shl, i)
+                val1 = np.sqrt(2/3)
+                expected_shl = [[0, val, -val, 0, 0, 0, 0],
+                                [val1, -val1/2, -val1/2, 0, 0, 0, 0],
+                                [0, 0, 0, 0, 0, 0, 0],
+                                [0, 0, 0, 0, 0, 0, 0],
+                                [0, 0, 0, 0, 0, 0, 0],
+                                [0, 0, 0, 0, 0, 0, 0],
+                                [0, 0, 0, 0, 0, 0, 0]]
+
+                expected_lilmat = [[0, 1, 1, 0, 0, 0, 0],
+                                   [1, 3, 3, 0, 0, 0, 0],
+                                   [0, 0, 0, 0, 0, 0, 0],
+                                   [0, 0, 0, 0, 0, 0, 0],
+                                   [0, 0, 0, 0, 0, 0, 0],
+                                   [0, 0, 0, 0, 0, 0, 0],
+                                   [0, 0, 0, 0, 0, 0, 0]]
+
+                expected_shl = scipy.sparse.lil_matrix(expected_shl)
+                expected_shl = expected_shl.todense()
+                expected_lilmat = scipy.sparse.lil_matrix(expected_lilmat)
+                expected_lilmat = expected_lilmat.todense()
+
+                assert np.isclose(expected_shl, shl.todense()).all()
+                assert np.isclose(expected_lilmat, lilmat.todense()).all()
+
+            if i == 2:
+                lilmat, shl = handle_both(node, lilmat, shl, i)
+
+            if i == 3:  # right
+                lilmat, shl = handle_right(node, lilmat, shl, i)
+                expected_shl = [[0, val, -val, 0, 0, 0, 0],
+                                [val1, -val1/2, -val1/2, 0, 0, 0, 0],
+                                [0, 0, 0, 0, val, -val, 0],
+                                [0, 0, 0, 0, val1/2, val1/2, -val1],
+                                [0, 0, 0, 0, 0, 0, 0],
+                                [0, 0, 0, 0, 0, 0, 0],
+                                [0, 0, 0, 0, 0, 0, 0]]
+
+                expected_lilmat = [[0, 1, 1, 0, 0, 0, 0],
+                                   [1, 3, 3, 0, 0, 0, 0],
+                                   [0, 0, 0, 0, 1, 1, 0],
+                                   [0, 0, 0, 0, 3, 3, 1],
+                                   [0, 0, 0, 0, 0, 0, 0],
+                                   [0, 0, 0, 0, 0, 0, 0],
+                                   [0, 0, 0, 0, 0, 0, 0]]
+
+                expected_shl = scipy.sparse.lil_matrix(expected_shl)
+                expected_shl = expected_shl.todense()
+                expected_lilmat = scipy.sparse.lil_matrix(expected_lilmat)
+                expected_lilmat = expected_lilmat.todense()
+
+                assert np.isclose(expected_shl, shl.todense()).all()
+                assert np.isclose(expected_lilmat, lilmat.todense()).all()
+
+            if i == 4:
+                lilmat, shl = handle_left(node, lilmat, shl, i)
+
+            if i == 5:
+                lilmat, shl = handle_neither(node, lilmat, shl, i)
+                val3 = np.sqrt(3/4)  # 0.8660254038
+                val4 = -np.sqrt(1/12)  # 0.2886751346
+                val5 = np.sqrt(4/21)  # 0.4364357805
+                val6 = -np.sqrt(3/28)  # 0.3273268354
+
+                expected_shl = [[0, val, -val, 0, 0, 0, 0],
+                                [val1, -val1/2, -val1/2, 0, 0, 0, 0],
+                                [0, 0, 0, 0, val, -val, 0],
+                                [0, 0, 0, 0, val1/2, val1/2, -val1],
+                                [0, 0, 0, val3, val4, val4, val4],
+                                [val5, val5, val5, val6, val6, val6, val6],
+                                [0, 0, 0, 0, 0, 0, 0]]
+
+                expected_lilmat = [[0, 1, 1, 0, 0, 0, 0],
+                                   [1, 3, 3, 0, 0, 0, 0],
+                                   [0, 0, 0, 0, 1, 1, 0],
+                                   [0, 0, 0, 0, 3, 3, 1],
+                                   [0, 0, 0, 1, 6, 6, 4],
+                                   [4, 6, 6, 5, 10, 10, 8],
+                                   [0, 0, 0, 0, 0, 0, 0]]
+
+                expected_shl = scipy.sparse.lil_matrix(expected_shl)
+                expected_shl = expected_shl.todense()
+                expected_lilmat = scipy.sparse.lil_matrix(expected_lilmat)
+                expected_lilmat = expected_lilmat.todense()
+
+                assert np.isclose(expected_shl, shl.todense()).all()
+                assert np.isclose(expected_lilmat, lilmat.todense()).all()
+
+    def test_get_lilmat_and_shl(self):
 
         _, t2, _ = match_to_tree(self.table, self.tree)
         t2, lilmat, shl = initiate_values(t2)
 
         for i, node in enumerate(t2.non_tips(include_self=True)):
             if i == 0:
-                lilmat, shl = handle_both(node, lilmat, shl, i)
+                nontip_inds0 = None
+                nontip_inds1 = None
+                tip_inds0 = get_tip_indeces(node, 'left')
+                tip_inds1 = get_tip_indeces(node, 'right')
+                left, right = get_L(tip_inds0, tip_inds1)
+                ntips = node.ntips_in_tree
+                h = get_haarvec(tip_inds0, tip_inds1, left, right, ntips)
+                assert (np.isclose(sum(h), 0.0)).all()  # Sum of haar = 0
+
+                lilmat, shl = get_lilmat_and_shl(node, nontip_inds0,
+                                                 nontip_inds1,
+                                                 lilmat, shl, i)
 
                 val = 1/np.sqrt(2)
                 expected_shl = [[0, val, -val, 0, 0, 0, 0],
@@ -377,8 +444,6 @@ class TestSparsify(TestCase):
 
         assert np.isclose(expected_lilmat.todense(), lilmat.todense()).all()
         assert np.isclose(expected_shl.todense(), shl.todense()).all()
-
-    def test_create_branching_tree(self):
 
         assert True
         # TODO
@@ -439,3 +504,17 @@ class TestSparsify(TestCase):
                               [0.0, 1.0, 2.0, 3.0, 3.0],
                               [0.0, 0.0, 6.0, 3.0, 3.0]])
         assert (table == after_exp).all()
+
+    def test_create_branching_tree(self):
+
+        _, t2, _ = match_to_tree(self.table, self.tree)
+        lilmat, shl = sparsify(t2)
+
+        lilmat_exp = np.array([[4, 6, 6, 0, 0, 0, 0],
+                               [0, 0, 0, 5, 10, 10, 8]])
+        val = np.sqrt(1/3)
+        shl_exp = np.array([[val, val, val, 0, 0, 0, 0],
+                            [0, 0, 0, .5, .5, .5, .5]])
+
+        assert np.isclose(lilmat_exp, lilmat.todense()[-2:]).all()
+        assert np.isclose(shl_exp, shl.todense()[-2:]).all()
