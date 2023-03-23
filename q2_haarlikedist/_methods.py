@@ -6,6 +6,7 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 
+from ast import Tuple
 import skbio
 from skbio import read
 from skbio.tree import TreeNode
@@ -262,7 +263,8 @@ def get_lambdas(lilmat, shl):
 def match_to_tree(table, tree):
     """ Returns aligned data in biom format.
         data_file must be a biom table. """
-
+    
+    table = table.norm()
     table, tree = table.align_tree(tree)
     ids = table.ids()
     table = table.matrix_data.tocsr()
@@ -290,16 +292,50 @@ def compute_haar_dist(table, shl, diagonal):
     D = D + D.T
     return D, modmags
 
+def format_tree(tree, modmags):
+    """ Formats tree for output.
+        Saves number of times node is most significant
+        as a node name and returns tree. """
 
-def haar_like_dist(table: biom.Table,
+    nontips = [node for node in tree.non_tips(include_self=True)]
+    for node in nontips:
+        node.max_modmag = 0
+
+    n = np.shape(modmags)[0]
+
+    # iterate over all comparisons without overlaps or when i = j
+    for i in range(n):
+        for j in range(i):
+            
+            diff = modmags[i] - modmags[j]
+            diff = [np.abs(d) for d in diff.todense()]
+            maxsplit = np.array(diff)[0][0].argmax()
+
+            # since there is two entries at the end of the nontip
+            # traversal representing each subtree
+            maxsplit = min(maxsplit, n)
+
+            node = nontips[maxsplit]
+            node.max_modmag +=1
+
+    for node in nontips:
+        node.name = str(node.max_modmag)
+
+    return tree
+
+def haar_like_dist(table: biom.Table, 
                    phylogeny: skbio.TreeNode) \
-                       -> (DistanceMatrix):
-    """ Returns D, modmags. Distance matrix and significance. """
-
+                   -> (DistanceMatrix, skbio.TreeNode):
+    """ Returns D, modmags. Distance matrix and significance.
+        Returns distance matrix and formatted tree.
+        Might want to return modmags later but will have
+        to define a new type. """
+    
     table, tree, ids = match_to_tree(table, phylogeny)
     lilmat, shl = sparsify(tree)
     diagonal = get_lambdas(lilmat, shl)
     D, modmags = compute_haar_dist(table, shl, diagonal)
     D = DistanceMatrix(D, ids)
+    tree = format_tree(tree, modmags)
 
-    return D
+    return D, tree

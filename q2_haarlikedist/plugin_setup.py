@@ -1,7 +1,9 @@
 from qiime2.plugin import Plugin, Citations
 
 # from skbio.stats.distance import DistanceMatrix
-from q2_types.feature_table import (FeatureTable, Frequency)
+from q2_types.feature_table import (FeatureTable, 
+                                    Frequency,
+                                    Relative)
 from q2_types.distance_matrix import DistanceMatrix
 from q2_types.tree import (Phylogeny, Rooted)
 from q2_haarlikedist._methods import haar_like_dist
@@ -25,11 +27,12 @@ plugin.methods.register_function(
     function=haar_like_dist,
     inputs={
         'phylogeny': Phylogeny[Rooted],
-        'table': FeatureTable[Frequency]
+        'table': FeatureTable[Frequency | Relative]
     },
     parameters={},
     outputs=[
         ('distance_matrix', DistanceMatrix),
+        ('annotated_tree', Phylogeny[Rooted])
     ],
     input_descriptions={
         'phylogeny': (
@@ -42,7 +45,10 @@ plugin.methods.register_function(
     parameter_descriptions={},
     output_descriptions={
         'distance_matrix':
-            'Resulting distance matrix.'
+            'Resulting distance matrix.',
+        'annotated_tree':
+            ('Resulting tree with annotated number of times ' 
+            'the edge is most significant.')
     },
     name='haarlikedist',
     description='Computes haar-like-distance between samples.',
