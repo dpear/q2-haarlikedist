@@ -33,8 +33,8 @@ plugin.methods.register_function(
         'table': FeatureTable[Frequency | RelativeFrequency]
     },
     parameters={
-        'comparative_column': MetadataColumn[Categorical],
-        'comparative_value': Str
+        'group_column': MetadataColumn[Categorical],
+        'group_value': Str
     },
     outputs=[
         ('distance_matrix', DistanceMatrix),
