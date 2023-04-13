@@ -518,3 +518,13 @@ class TestSparsify(TestCase):
 
         assert np.isclose(lilmat_exp, lilmat.todense()[-2:]).all()
         assert np.isclose(shl_exp, shl.todense()[-2:]).all()
+
+    def test_compute_haar_dist(self):
+
+        # TODO
+        assert True
+
+    def test_format_tree(self):
+
+        # TODO
+        assert True

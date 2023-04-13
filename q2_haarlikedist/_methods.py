@@ -6,7 +6,6 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 
-from ast import Tuple
 import skbio
 from skbio import read
 from skbio.tree import TreeNode
@@ -14,6 +13,7 @@ from skbio.stats.distance import DistanceMatrix
 from scipy.sparse import csr_matrix, lil_matrix
 import numpy as np
 import biom
+from qiime2 import CategoricalMetadataColumn as Column
 
 
 def get_tree_from_file(tree_file):
@@ -263,7 +263,7 @@ def get_lambdas(lilmat, shl):
 def match_to_tree(table, tree):
     """ Returns aligned data in biom format.
         data_file must be a biom table. """
-    
+
     table = table.norm()
     table, tree = table.align_tree(tree)
     ids = table.ids()
@@ -292,7 +292,36 @@ def compute_haar_dist(table, shl, diagonal):
     D = D + D.T
     return D, modmags
 
+
 def format_tree(tree, modmags):
+    """ Formats tree for output.
+        Saves number of times node is most significant
+        as a node name and returns tree. """
+
+    nontips = [node for node in tree.non_tips(include_self=True)]
+    n = np.shape(modmags)[0]
+    m = np.shape(modmags)[1]
+    node_weights = np.zeros(m)
+    for i in range(n):
+        for j in range(i):
+            if i != j:
+                diff = modmags[i] - modmags[j]
+                diff = [np.abs(d) for d in diff.todense()]
+                d = np.array(diff)[0][0]
+                node_weights += d
+
+    # node_weights = [np.log(x) for x in node_weights]
+    node_weights = node_weights / sum(node_weights)
+    for i, node in enumerate(nontips):
+        node.length = np.round(node_weights[i], 4)
+        node.name = str(node.length)
+
+    nontips[-1].name = '0'
+
+    return tree
+
+
+def format_tree_meta(tree, modmags, metadata_col, metadata_val):
     """ Formats tree for output.
         Saves number of times node is most significant
         as a node name and returns tree. """
@@ -301,41 +330,49 @@ def format_tree(tree, modmags):
     for node in nontips:
         node.max_modmag = 0
 
-    n = np.shape(modmags)[0]
+    m = np.shape(modmags)[1]
+    node_weights = np.zeros(m)
 
-    # iterate over all comparisons without overlaps or when i = j
-    for i in range(n):
-        for j in range(i):
-            
+    # Construct the indices of the two groups to prepare
+    col = metadata_col.to_series()
+    vals = [x[0] for x in col.values]
+    i_ind = [i for i, x in enumerate(vals) if x == metadata_val]
+    j_ind = [x for x in range(m) if x not in i_ind]
+
+    for i in i_ind:
+        for j in j_ind:
             diff = modmags[i] - modmags[j]
             diff = [np.abs(d) for d in diff.todense()]
-            maxsplit = np.array(diff)[0][0].argmax()
+            d = np.array(diff)[0][0]
+            node_weights += d
 
-            # since there is two entries at the end of the nontip
-            # traversal representing each subtree
-            maxsplit = min(maxsplit, n)
+    for i, node in enumerate(nontips):
+        node.length = np.round(node_weights[i], 4)
+        node.name = str(node.length)
 
-            node = nontips[maxsplit]
-            node.max_modmag +=1
-
-    for node in nontips:
-        node.name = str(node.max_modmag)
+    nontips[-1].name = '0'
 
     return tree
 
-def haar_like_dist(table: biom.Table, 
-                   phylogeny: skbio.TreeNode) \
+
+def haar_like_dist(table: biom.Table,
+                   phylogeny: skbio.TreeNode,
+                   group_column: Column = None,
+                   group_value: str = None) \
                    -> (DistanceMatrix, skbio.TreeNode):
     """ Returns D, modmags. Distance matrix and significance.
         Returns distance matrix and formatted tree.
         Might want to return modmags later but will have
         to define a new type. """
-    
+
     table, tree, ids = match_to_tree(table, phylogeny)
     lilmat, shl = sparsify(tree)
     diagonal = get_lambdas(lilmat, shl)
     D, modmags = compute_haar_dist(table, shl, diagonal)
     D = DistanceMatrix(D, ids)
-    tree = format_tree(tree, modmags)
+    if group_column is not None and group_value is not None:
+        tree = format_tree_meta(tree, modmags, group_column, group_value)
+    else:
+        tree = format_tree(tree, modmags)
 
     return D, tree
