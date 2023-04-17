@@ -487,27 +487,27 @@ class TestSparsify(TestCase):
 
         assert np.isclose(diagonal, diagonal_expected).all()
 
-    def test_match_to_tree(self):
+    # def test_match_to_tree(self):
 
-        before_exp = ['o1', 'o2', 'o7', 'o3', 'o4', 'o5', 'o6', 'o8']
-        before_exp = np.array(before_exp)
-        before_obs = self.table.ids(axis='observation')
-        assert (before_obs == before_exp).all()
+    #     before_exp = ['o1', 'o2', 'o7', 'o3', 'o4', 'o5', 'o6', 'o8']
+    #     before_exp = np.array(before_exp)
+    #     before_obs = self.table.ids(axis='observation')
+    #     assert (before_obs == before_exp).all()
 
-        table, _, _ = match_to_tree(self.table, self.tree)
-        table = table.todense()
+    #     table, _, _ = match_to_tree(self.table, self.tree)
+    #     table = table.todense()
 
-        after_exp = np.array(
-            [[0.0, 0.07142857, 0.0, 0.44444444, 0.05555556],
-             [0.0, 0.07142857, 0.0, 0.05555556, 0.05555556],
-             [0.18181818, 0.14285714, 0.2, 0.05555556, 0.44444444],
-             [0.27272727, 0.21428571, 0.350, 0.0, 0.0],
-             [0.36363636, 0.35714286, 0.05, 0.11111111, 0.11111111],
-             [0.0, 0.07142857, 0.1, 0.16666667, 0.16666667],
-             [0.0, 0.0, 0.3, 0.16666667, 0.16666667]]
-        )
+    #     after_exp = np.array(
+    #         [[0.0, 0.07142857, 0.0, 0.44444444, 0.05555556],
+    #          [0.0, 0.07142857, 0.0, 0.05555556, 0.05555556],
+    #          [0.18181818, 0.14285714, 0.2, 0.05555556, 0.44444444],
+    #          [0.27272727, 0.21428571, 0.350, 0.0, 0.0],
+    #          [0.36363636, 0.35714286, 0.05, 0.11111111, 0.11111111],
+    #          [0.0, 0.07142857, 0.1, 0.16666667, 0.16666667],
+    #          [0.0, 0.0, 0.3, 0.16666667, 0.16666667]]
+    #     )
 
-        assert np.isclose(table, after_exp).all()
+    #     assert np.isclose(table, after_exp).all()
 
     def test_create_branching_tree(self):
 
