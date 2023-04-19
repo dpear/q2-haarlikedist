@@ -23,7 +23,7 @@ from q2_haarlikedist._methods import (initiate_values,
                                       sparsify,
                                       get_lambda,
                                       match_to_tree,
-                                      # compute_haar_dist,
+                                      compute_haar_dist,
                                       # haar_like_dist,
                                       get_lambdas)
 
@@ -525,8 +525,38 @@ class TestSparsify(TestCase):
 
     def test_compute_haar_dist(self):
 
-        # TODO
-        assert True
+        exp_D = [
+            [0.0, 0.20732524, 0.57374449, 0.93465657, 0.7966299],
+            [0.20732524, 0.0, 0.61110055, 0.78242334, 0.6983557],
+            [0.57374449, 0.61110055, 0.0, 1.00183645, 0.86363033],
+            [0.93465657, 0.78242334, 1.00183645, 0.0, 0.67357531],
+            [0.7966299, 0.6983557, 0.86363033, 0.67357531, 0.0]
+        ]
+
+        exp_modmags = [
+            [-0.12856487, -0.0958266, 0.25712974, 0.19165319] +
+            [0.18939394, 0.24242424, 0.91390769],
+            [-0.05050763, -0.03764616, 0.20203051, 0.22587698] +
+            [0.08928571, 0.38095238, 0.92323328],
+            [-0.14142136, -0.10540926, -0.03535534, -0.23717082] +
+            [0.25, 0.26666667, 1.14891253],
+            [0.0, 0.40992488, -0.03928371, -0.02928035] +
+            [-0.18518519, 0.74074074, 0.63828474],
+            [-0.27498597, -0.20496244, -0.03928371, -0.02928035] +
+            [-0.18518519, 0.74074074, 0.63828474]
+        ]
+
+        exp_D = np.array(exp_D)
+        exp_modmags = np.array(exp_modmags)
+
+        table, tree, ids = match_to_tree(self.table, self.tree)
+        lilmat, shl = sparsify(tree)
+        diagonal = get_lambdas(lilmat, shl)
+        D, modmags = compute_haar_dist(table, shl, diagonal)
+        modmags = modmags.todense()
+
+        assert np.isclose(exp_D, D).all()
+        assert np.isclose(exp_modmags, modmags).all()
 
     def test_format_tree(self):
 
