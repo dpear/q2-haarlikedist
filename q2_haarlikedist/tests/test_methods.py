@@ -549,10 +549,10 @@ class TestSparsify(TestCase):
         exp_D = np.array(exp_D)
         exp_modmags = np.array(exp_modmags)
 
-        table, tree, ids, _ = match_to_tree(self.table, self.tree)
+        table, tree, ids, table_matrix = match_to_tree(self.table, self.tree)
         lilmat, shl = sparsify(tree)
         diagonal = get_lambdas(lilmat, shl)
-        D, modmags = compute_haar_dist(table, shl, diagonal)
+        D, modmags = compute_haar_dist(table_matrix, shl, diagonal)
         modmags = modmags.todense()
 
         assert np.isclose(exp_D, D).all()
