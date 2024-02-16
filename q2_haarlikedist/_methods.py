@@ -267,8 +267,8 @@ def match_to_tree(table, tree):
     table = table.norm()
     table, tree = table.align_tree(tree)
     ids = table.ids()
-    table = table.matrix_data.tocsr()
-    return table, tree, ids
+    table_matrix = table.matrix_data.tocsr()
+    return table, tree, ids, table_matrix
 
 
 def compute_haar_dist(table, shl, diagonal):
@@ -279,15 +279,15 @@ def compute_haar_dist(table, shl, diagonal):
     diagonal_mat_sqrt = np.sqrt(diagonal_mat)
     mags = shl @ table
     modmags = mags.T.multiply(diagonal_mat_sqrt)
+    ones = csr_matrix(np.ones((nsamples, 1)))  # 1's csr_matrix for casting
 
     D = np.zeros((nsamples, nsamples))
     for i in range(nsamples):
-        for j in range(i+1, nsamples):
-
-            distdiff = modmags[i] - modmags[j]
-            distdiff2 = csr_matrix.power(distdiff, 2)
-            d = csr_matrix.sum(distdiff2)
-            D[i, j] = np.sqrt(d)
+        a = modmags - modmags[i, :].multiply(ones)
+        b = csr_matrix.power(a, 2)
+        c = csr_matrix.sum(b, axis=1)
+        d = np.sqrt(c)
+        D[i, :] = csr_matrix(d.T)
 
     D = D + D.T
     return D, modmags
@@ -359,20 +359,23 @@ def haar_like_dist(table: biom.Table,
                    phylogeny: skbio.TreeNode,
                    group_column: Column = None,
                    group_value: str = None) \
-                   -> (DistanceMatrix, skbio.TreeNode):
-    """ Returns D, modmags. Distance matrix and significance.
+                   -> (DistanceMatrix, skbio.TreeNode,
+                       biom.Table):
+    """ Returns D, tree, mm. Distance matrix and significance.
         Returns distance matrix and formatted tree.
-        Might want to return modmags later but will have
-        to define a new type. """
+        This now returns modmags as a biom table, which
+        can be thought of as a differentially encoded
+        feature table. """
 
-    table, tree, ids = match_to_tree(table, phylogeny)
+    table, tree, ids, table_matrix = match_to_tree(table, phylogeny)
     lilmat, shl = sparsify(tree)
     diagonal = get_lambdas(lilmat, shl)
-    D, modmags = compute_haar_dist(table, shl, diagonal)
+    D, modmags = compute_haar_dist(table_matrix, shl, diagonal)
     D = DistanceMatrix(D, ids)
     if group_column is not None and group_value is not None:
         tree = format_tree_meta(tree, modmags, group_column, group_value)
     else:
         tree = format_tree(tree, modmags)
+    mm = biom.Table(modmags, observation_ids=[], sample_ids=[])
 
-    return D, tree
+    return D, tree, mm

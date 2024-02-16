@@ -11,7 +11,6 @@ from q2_types.tree import (Phylogeny, Rooted)
 
 from q2_haarlikedist._methods import haar_like_dist
 
-
 citations = Citations.load('citations.bib', package='q2_haarlikedist')
 
 plugin = Plugin(
@@ -38,7 +37,8 @@ plugin.methods.register_function(
     },
     outputs=[
         ('distance_matrix', DistanceMatrix),
-        ('annotated_tree', Phylogeny[Rooted])
+        ('annotated_tree', Phylogeny[Rooted]),
+        ('modmags', FeatureTable[Frequency])
     ],
     input_descriptions={
         'phylogeny': (
@@ -56,10 +56,16 @@ plugin.methods.register_function(
     },
     output_descriptions={
         'distance_matrix':
-            'Resulting distance matrix.',
+            ('Resulting pairwise distance matrix computed from '
+             'modmags.'),
         'annotated_tree':
             ('Resulting tree with annotated number of times '
-             'the edge is most significant.')
+             'the edge is most significant.'),
+        'modmags':
+            ('A feature table which can be seen as '
+             'a differential encoding. Distances can be '
+             'calculated from this matrix in several different '
+             'ways.')
     },
     name='haarlikedist',
     description='Computes haar-like-distance between samples.',
