@@ -55,7 +55,7 @@ class TestSparsify(TestCase):
 
         expected = scipy.sparse.lil_matrix((self.ntips, self.ntips))
 
-        _, t2, _ = match_to_tree(self.table, self.tree)
+        _, t2, _, _ = match_to_tree(self.table, self.tree)
         t2, lilmat, shl = initiate_values(t2)
 
         assert (lilmat != expected).nnz == 0
@@ -85,7 +85,7 @@ class TestSparsify(TestCase):
 
     def test_get_case(self):
 
-        _, t2, _ = match_to_tree(self.table, self.tree)
+        _, t2, _, _ = match_to_tree(self.table, self.tree)
         t2, lilmat, shl = initiate_values(t2)
 
         for i, node in enumerate(t2.non_tips(include_self=True)):
@@ -105,7 +105,7 @@ class TestSparsify(TestCase):
 
     def test_get_nontip_index(self):
 
-        _, t2, _ = match_to_tree(self.table, self.tree)
+        _, t2, _, _ = match_to_tree(self.table, self.tree)
         t2, lilmat, shl = initiate_values(t2)
 
         for i, node in enumerate(t2.non_tips(include_self=True)):
@@ -126,7 +126,7 @@ class TestSparsify(TestCase):
 
     def test_get_tip_indeces(self):
 
-        _, t2, _ = match_to_tree(self.table, self.tree)
+        _, t2, _, _ = match_to_tree(self.table, self.tree)
         t2, lilmat, shl = initiate_values(t2)
 
         for i, node in enumerate(t2.non_tips(include_self=True)):
@@ -152,7 +152,7 @@ class TestSparsify(TestCase):
 
     def test_get_lstar(self):
 
-        _, t2, _ = match_to_tree(self.table, self.tree)
+        _, t2, _, _ = match_to_tree(self.table, self.tree)
         t2, lilmat, shl = initiate_values(t2)
 
         for i, node in enumerate(t2.non_tips(include_self=True)):
@@ -192,7 +192,7 @@ class TestSparsify(TestCase):
 
     def test_get_L(self):
 
-        _, t2, _ = match_to_tree(self.table, self.tree)
+        _, t2, _, _ = match_to_tree(self.table, self.tree)
         t2, lilmat, shl = initiate_values(t2)
 
         for i, node in enumerate(t2.non_tips(include_self=True)):
@@ -213,7 +213,7 @@ class TestSparsify(TestCase):
 
     def test_get_haarvec(self):
 
-        _, t2, _ = match_to_tree(self.table, self.tree)
+        _, t2, _, _ = match_to_tree(self.table, self.tree)
         t2, lilmat, shl = initiate_values(t2)
 
         for i, node in enumerate(t2.non_tips(include_self=True)):
@@ -247,7 +247,7 @@ class TestSparsify(TestCase):
 
     def test_handle_case(self):
 
-        _, t2, _ = match_to_tree(self.table, self.tree)
+        _, t2, _, _ = match_to_tree(self.table, self.tree)
         t2, lilmat, shl = initiate_values(t2)
 
         for i, node in enumerate(t2.non_tips(include_self=True)):
@@ -371,7 +371,7 @@ class TestSparsify(TestCase):
 
     def test_get_lilmat_and_shl(self):
 
-        _, t2, _ = match_to_tree(self.table, self.tree)
+        _, t2, _, _ = match_to_tree(self.table, self.tree)
         t2, lilmat, shl = initiate_values(t2)
 
         for i, node in enumerate(t2.non_tips(include_self=True)):
@@ -450,7 +450,7 @@ class TestSparsify(TestCase):
 
     def test_get_lambda(self):
 
-        _, t2, _ = match_to_tree(self.table, self.tree)
+        _, t2, _, _ = match_to_tree(self.table, self.tree)
         lilmat, shl = sparsify(t2)
 
         for i in range(lilmat.shape[0]):
@@ -479,7 +479,7 @@ class TestSparsify(TestCase):
 
     def test_get_lambdas(self):
 
-        _, t2, _ = match_to_tree(self.table, self.tree)
+        _, t2, _, _ = match_to_tree(self.table, self.tree)
         lilmat, shl = sparsify(t2)
 
         diagonal = get_lambdas(lilmat, shl)
@@ -494,7 +494,7 @@ class TestSparsify(TestCase):
         before_obs = self.table.ids(axis='observation')
         assert (before_obs == before_exp).all()
 
-        table, _, _ = match_to_tree(self.table, self.tree)
+        table, _, _, _ = match_to_tree(self.table, self.tree)
         table = table.todense()
 
         after_exp = np.array(
@@ -511,7 +511,7 @@ class TestSparsify(TestCase):
 
     def test_create_branching_tree(self):
 
-        _, t2, _ = match_to_tree(self.table, self.tree)
+        _, t2, _, _ = match_to_tree(self.table, self.tree)
         lilmat, shl = sparsify(t2)
 
         lilmat_exp = np.array([[4, 6, 6, 0, 0, 0, 0],
@@ -549,7 +549,7 @@ class TestSparsify(TestCase):
         exp_D = np.array(exp_D)
         exp_modmags = np.array(exp_modmags)
 
-        table, tree, ids = match_to_tree(self.table, self.tree)
+        table, tree, ids, _ = match_to_tree(self.table, self.tree)
         lilmat, shl = sparsify(tree)
         diagonal = get_lambdas(lilmat, shl)
         D, modmags = compute_haar_dist(table, shl, diagonal)
