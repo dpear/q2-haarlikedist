@@ -1,106 +1,122 @@
-<!DOCTYPE html>
-<html lang="en">
-
 {% extends 'base.html' %}
 
 {% block content %}
-
 <style>
-  .container {
-      display: flex;
-      justify-content: flex-start;
+  :root {
+    --section-max: 1400px;   /* clamp width for big SVGs */
+    --gap: 16px;
+    --vh: 80vh;              /* max height for tall plots */
   }
-  .box {
-      width: 45%;
-      padding: 20px;
-      border: 1px solid #FFFFFF;
+  .section { max-width: var(--section-max); margin: 0 auto 32px auto; }
+  .container { display: grid; grid-template-columns: 1fr; gap: var(--gap); }
+  @media (min-width: 1000px) {
+    .two-up { display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap); align-items: start; }
   }
+  .card {
+    border: 1px solid #eee; padding: 16px; border-radius: 8px;
+    background: #fff;
+  }
+  img.plot { max-width: 100%; height: auto; object-fit: contain; display: block; }
+  img.tall { max-height: var(--vh); width: auto; object-fit: contain; }
+  .scroll-box { max-height: 40vh; overflow-y: auto; border: 1px solid #eee; padding: 8px; background: #fafafa; }
 </style>
 
-<div>
-<h1>HLD Results</h1>
-  Plots of HLD outputs. 
+<div class="section">
+  <h1>HLD Results</h1>
+  Plots of HLD outputs.
 </div>
-    
-<h2>Reconstructed RF Gram matrix using top 5 most dominant Haar Coordinates</h2>
-Here an RF Gram  matrix (left) is compared to the sparse approximation
-using 5 haar-like coordinates.
-These should faintly resemble eachother and
-show how well a sparse approximation is able to represent your dataset.
 
-<div class="container">
-  <div class="box">
-    <h2> RF Gram Matrix</h2>
-    This plot shows the RF affinity between each set of points. The RF affinity is a 
-    distance metric that measures how similar two samples are by comparing how similarly
-    the decision trees in a random forest behave when classifying samples. In simpler
-    terms this can be viewed as a distance matrix for all samples based on the RF affinity
-    distance. 
+<div class="section">
+  <h2>Reconstructed RF Gram matrix using top 5 most dominant Haar Coordinates</h2>
+  <p>Here an RF Gram matrix (left) is compared to the sparse approximation using 5 Haar-like coordinates.</p>
+  <img class="plot tall" src="rfgram.svg" alt="RF Gram vs reconstructed">
+</div>
+
+<div class="section">
+  <h2>Log Ratios</h2>
+  <img class="plot tall" src="boxplot.svg" alt="Boxplots of Haar-like nodes">
+</div>
+
+<div class="section two-up">
+  <div class="card">
+    <h2>Biplot</h2>
+    <img class="plot tall" src="biplot.svg" alt="PCA biplot">
   </div>
-  <div class="box">
-    <h2>Reconstructed haar-like distance matrix</h2>
-    Our goal is to reconstruct the RF Gram Matrix using a reduced feature space, so
-    we learn weights for the 5 most important internal nodes of the phylogeny tree and
-    reconstruct the dataset using only this information. Ideally the reconstructed matrix
-    will look similar to the RF Gram Matrix and have a relatively high correlation. Note that
-    because the two different ways of reconstructing the data matrix use different scales, 
-    correlations in the range .2 - .5 should be considered adequate.
+  <div class="card">
+    <h2>Biplot (normalized)</h2>
+    <img class="plot tall" src="biplotn.svg" alt="PCA biplot (normalized)">
   </div>
-
-  <!-- The resulting embedding is based entirely on a small (5) number of clades. 
-  What is shown here is the distance matrix resulting from the new sample embedding.
-  On the left we see the Random Forest Gram-like matrix.
-  This is derived from #################### I left off here, I'm describing how
-  the metric learning nooooo I'm describing why the rf gram matrix resembles
-  the original dataset and how the reconstructed haar-like "kernel" learns
-  weights to reconstruct it and display the differences between the two. -->
-</div>
-<img src="rfgram.svg" alt="rfgram">
-
-<h2>Log Ratios</h2>
-<div>
-  <img src="boxplot.svg" alt="boxplot">
 </div>
 
-<h2>Biplots</h2>
-<div>
-  <img src="biplot.svg" alt="biplot">
-  <img src="biplotn.svg" alt="biplotn">
+<div class="section">
+  <h2>Interactive PCA (Emperor)</h2>
+  <p>Explore the ordination interactively (colored by “{{ label }}”).</p>
+
+  <p>
+    <button id="emperor-download-btn" class="btn">Download <code>interactive-pca.qzv</code></button>
+    <a id="emperor-download-fallback" href="interactive-pca.qzv" download style="display:none; margin-left:8px;">
+      Fallback direct link
+    </a>
+  </p>
+
+  <p style="font-size:0.95em;color:#555">
+    Tip: Drag the downloaded file onto
+    <a href="https://view.qiime2.org" target="_blank" rel="noopener">QIIME 2 View</a>.
+  </p>
 </div>
 
-<!-- print the most important internal nodes -->
-<h2>Postorder internal node indeces</h2>
-<div>
+<script>
+// Robust binary download of an embedded asset inside a QZV.
+(function () {
+  const PATH = 'interactive-pca.qzv';
+  const BTN = document.getElementById('emperor-download-btn');
+  const FALLBACK = document.getElementById('emperor-download-fallback');
+
+  BTN?.addEventListener('click', async () => {
+    try {
+      const resp = await fetch(PATH);
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      const blob = await resp.blob();
+
+      // Heuristic: if it's suspiciously tiny, it's likely a text error page.
+      if (blob.size < 10_000) {
+        // Show fallback link and tell the user.
+        FALLBACK.style.display = 'inline';
+        alert('Download looked corrupted (too small). Use the fallback link, or unzip visualization.qzv to extract interactive-pca.qzv.');
+        return;
+      }
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'interactive-pca.qzv';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 0);
+    } catch (err) {
+      console.error('[emperor download] ', err);
+      FALLBACK.style.display = 'inline';
+      alert('Could not fetch the file automatically. Use the fallback link or unzip visualization.qzv.');
+    }
+  });
+})();
+</script>
+
+
+<div class="section">
+  <h2>Postorder internal node indices</h2>
   The following are the coordinates of the internal nodes found to be most important: {{ coordinates }}
 </div>
 
-
-<!-- print the most important taxa -->
-
-<style>
-  .scroll-box {
-      max-height: 400px;
-      overflow-y: scroll;     /* Enable vertical scrolling */
-  }
-</style>
-
-<h2>Most Important Taxa</h2>
-<div>
-  The following are the corresponding clades found to be most important in distinguishing groups.
-  coord x refers to the internal node and listed below are the left and right children of the tree.
-  These taxonomic splits are found to be the most important over the tree according to HLD.
-</div>
-  
-
-<div class="scroll-box">
-  <pre>{{ s }}</pre>
+<div class="section">
+  <h2>Most Important Taxa</h2>
+  <p>The corresponding clades most important for distinguishing groups.</p>
+  <div class="scroll-box"><pre>{{ s }}</pre></div>
 </div>
 
-<!-- print the most important taxa -->
-<h2>Variable of Interest</h2>
-<div>
+<div class="section">
+  <h2>Variable of Interest</h2>
   The variable of interest used for this analysis was: {{ label }}
 </div>
-
 
 {% endblock %}

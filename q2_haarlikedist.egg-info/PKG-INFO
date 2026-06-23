@@ -1,0 +1,12 @@
+Metadata-Version: 2.1
+Name: q2-haarlikedist
+Version: 0.0.1
+Summary: compute haar-like distance
+Author: Daniela Perry
+Author-email: dsperry@ucsd.edu
+License: BSD-3
+License-File: LICENSE
+Requires-Dist: scipy
+Requires-Dist: scikit-bio
+Requires-Dist: pandas
+Requires-Dist: biom-format

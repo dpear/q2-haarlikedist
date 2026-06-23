@@ -1,0 +1,2 @@
+[qiime2.plugins]
+q2-haarlikedist = q2_haarlikedist.plugin_setup:plugin
